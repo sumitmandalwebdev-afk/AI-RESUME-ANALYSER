@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Admin — ResumeIQ{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <h1 class="page-title">Admin Analytics</h1>
+    <p class="page-sub">Live stats from real usage data.</p>
+    <div id="admin-root">
+      <div class="loading-state"><div class="spinner"></div><p>Loading…</p></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function loadAdmin() {
+    const root = document.getElementById('admin-root');
+    try {
+      const res = await fetch('/api/admin/stats');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Forbidden');
+
+      const t = data.totals || {};
+      root.innerHTML = `
+        <div class="stats-grid">
+          <div class="card stat-card"><div class="stat-num">${t.users ?? 0}</div><div class="stat-label">Users</div></div>
+          <div class="card stat-card"><div class="stat-num">${t.analyses ?? 0}</div><div class="stat-label">Analyses</div></div>
+          <div class="card stat-card"><div class="stat-num">${t.completed ?? 0}</div><div class="stat-label">Completed</div></div>
+          <div class="card stat-card"><div class="stat-num">${t.avg_score ?? '—'}</div><div class="stat-label">Avg Score</div></div>
+        </div>
+
+        <h2 class="section-title">Recent activity</h2>
+        <div class="card">
+          <table class="simple-table">
+            <thead><tr><th>File</th><th>Score</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+              ${(data.recent || []).map(r => `
+                <tr>
+                  <td>${escapeHtml(r.file_name || '')}</td>
+                  <td>${r.ats_score != null ? r.ats_score : '—'}</td>
+                  <td>${r.status}</td>
+                  <td>${formatDate(r.created_at)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <h2 class="section-title">Users</h2>
+        <div class="card">
+          <table class="simple-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead>
+            <tbody>
+              ${(data.users || []).map(u => `
+                <tr>
+                  <td>${escapeHtml(u.full_name || '—')}</td>
+                  <td>${escapeHtml(u.email || '')}</td>
+                  <td>${formatDate(u.created_at)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } catch (err) {
+      root.innerHTML = `<div class="card error-card"><h2>Access denied</h2><p>${escapeHtml(err.message)}</p>
+        <p class="muted">You need the admin role. Run the SQL in schema.sql after signing up.</p></div>`;
+    }
+  }
+  loadAdmin();
+</script>
+{% endblock %}

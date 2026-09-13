@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}ResumeIQ — Know your ATS score before the recruiter{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <p class="badge">✦ AI-powered ATS audit</p>
+    <h1>Know your resume's score <span class="accent">before</span> the recruiter does.</h1>
+    <p class="lead">
+      Upload a PDF, optionally paste a job description, and get a rigorous ATS score
+      with strengths, weaknesses, missing keywords and concrete fixes — in under a minute.
+    </p>
+    <div class="hero-actions">
+      {% if user %}
+        <a href="/dashboard" class="btn btn-primary btn-lg">Go to Dashboard →</a>
+      {% else %}
+        <a href="/login" class="btn btn-primary btn-lg">Analyze my resume →</a>
+      {% endif %}
+      <a href="#how" class="btn btn-outline btn-lg">How it works</a>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="section">
+  <div class="container">
+    <h2>What you get</h2>
+    <div class="feature-grid">
+      <div class="card feature-card">
+        <div class="icon">🎯</div>
+        <h3>ATS score 0–100</h3>
+        <p>See how applicant tracking systems read your resume before recruiters do.</p>
+      </div>
+      <div class="card feature-card">
+        <div class="icon">📋</div>
+        <h3>Section breakdown</h3>
+        <p>Per-section scores for Contact, Summary, Experience, Education, Skills, Projects & Formatting.</p>
+      </div>
+      <div class="card feature-card">
+        <div class="icon">🔑</div>
+        <h3>Missing keywords</h3>
+        <p>Paste a job description to get a match % and the exact keywords you are missing.</p>
+      </div>
+      <div class="card feature-card">
+        <div class="icon">📜</div>
+        <h3>Analysis history</h3>
+        <p>Every run is saved so you can track improvements across versions.</p>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">01</span>
+        <div>
+          <h3>Upload</h3>
+          <p>Drop a text-based PDF resume (max 5 MB).</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">02</span>
+        <div>
+          <h3>Analyze</h3>
+          <p>Text is extracted and scored by AI against ATS best practices.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">03</span>
+        <div>
+          <h3>Improve</h3>
+          <p>Apply the suggestions, re-upload, and watch the score climb.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

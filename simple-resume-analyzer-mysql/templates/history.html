@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}History — ResumeIQ{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <h1 class="page-title">Analysis History</h1>
+    <p class="page-sub">All your past resume analyses.</p>
+    <div id="history-list" class="analysis-list">
+      <p class="muted">Loading…</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function loadHistory() {
+    const el = document.getElementById('history-list');
+    try {
+      const res = await fetch('/api/analyses');
+      const data = await res.json();
+      const list = data.analyses || [];
+      if (!list.length) {
+        el.innerHTML = '<p class="muted">No analyses yet. <a href="/dashboard">Upload one</a>.</p>';
+        return;
+      }
+      el.innerHTML = list.map(a => `
+        <div class="analysis-row history-row">
+          <a href="/analysis/${a.id}" class="row-main">
+            <div>
+              <strong>${escapeHtml(a.file_name)}</strong>
+              <span class="muted">${formatDate(a.created_at)}</span>
+            </div>
+            <div class="row-right">
+              ${a.status === 'completed' && a.ats_score != null
+                ? `<span class="score-pill ${scoreClass(a.ats_score)}">${a.ats_score}</span>`
+                : `<span class="status-pill">${a.status}</span>`}
+            </div>
+          </a>
+          <button class="btn btn-ghost btn-sm delete-btn" data-id="${a.id}" title="Delete">🗑</button>
+        </div>
+      `).join('');
+
+      el.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this analysis?')) return;
+          await fetch('/api/analyses/' + btn.dataset.id, { method: 'DELETE' });
+          toast('Deleted', 'success');
+          loadHistory();
+        });
+      });
+    } catch {
+      el.innerHTML = '<p class="muted">Could not load history.</p>';
+    }
+  }
+  loadHistory();
+</script>
+{% endblock %}

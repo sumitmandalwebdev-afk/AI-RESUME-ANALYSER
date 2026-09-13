@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — ResumeIQ{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <h1 class="page-title">Upload & Analyze</h1>
+    <p class="page-sub">Drop your PDF resume. Optionally paste a job description for match scoring.</p>
+
+    <div class="upload-grid">
+      <!-- Upload card -->
+      <div class="card upload-card" id="drop-zone">
+        <input type="file" id="pdf-input" accept=".pdf,application/pdf" hidden />
+        <div class="drop-content" id="drop-content">
+          <div class="upload-icon">📄</div>
+          <p><strong>Drag & drop</strong> your PDF here</p>
+          <p class="muted">or click to browse · max 5 MB · text-based PDF only</p>
+          <button class="btn btn-outline" id="browse-btn">Choose PDF</button>
+        </div>
+        <div class="file-selected" id="file-selected" style="display:none">
+          <div class="file-chip">
+            <span id="file-name"></span>
+            <button class="chip-remove" id="clear-file" title="Remove">×</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- JD + Analyze -->
+      <div class="card">
+        <label class="field-label">Job description (optional)</label>
+        <textarea id="jd-input" rows="8" placeholder="Paste the job description here to get a match score and missing keywords…"></textarea>
+        <button class="btn btn-primary btn-block btn-lg" id="analyze-btn" disabled>
+          Analyze Resume
+        </button>
+        <div id="progress" class="progress-box" style="display:none">
+          <div class="spinner"></div>
+          <p id="progress-text">Uploading…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent analyses -->
+    <h2 class="section-title">Recent analyses</h2>
+    <div id="recent-list" class="analysis-list">
+      <p class="muted">Loading…</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const dropZone = document.getElementById('drop-zone');
+  const pdfInput = document.getElementById('pdf-input');
+  const browseBtn = document.getElementById('browse-btn');
+  const dropContent = document.getElementById('drop-content');
+  const fileSelected = document.getElementById('file-selected');
+  const fileNameEl = document.getElementById('file-name');
+  const clearBtn = document.getElementById('clear-file');
+  const analyzeBtn = document.getElementById('analyze-btn');
+  const progress = document.getElementById('progress');
+  const progressText = document.getElementById('progress-text');
+  let selectedFile = null;
+
+  function setFile(file) {
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      toast('Please upload a PDF file', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast('PDF must be under 5 MB', 'error');
+      return;
+    }
+    selectedFile = file;
+    fileNameEl.textContent = file.name;
+    dropContent.style.display = 'none';
+    fileSelected.style.display = 'flex';
+    analyzeBtn.disabled = false;
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    pdfInput.value = '';
+    dropContent.style.display = 'block';
+    fileSelected.style.display = 'none';
+    analyzeBtn.disabled = true;
+  }
+
+  browseBtn.addEventListener('click', () => pdfInput.click());
+  pdfInput.addEventListener('change', (e) => setFile(e.target.files[0]));
+  clearBtn.addEventListener('click', clearFile);
+
+  // Drag & drop
+  ['dragenter', 'dragover'].forEach(ev => {
+    dropZone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(ev => {
+    dropZone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+    });
+  });
+  dropZone.addEventListener('drop', (e) => {
+    setFile(e.dataTransfer.files[0]);
+  });
+  dropZone.addEventListener('click', (e) => {
+    if (e.target === dropZone || e.target.closest('.drop-content')) pdfInput.click();
+  });
+
+  // Analyze
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    analyzeBtn.disabled = true;
+    progress.style.display = 'flex';
+    progressText.textContent = 'Uploading PDF & extracting text…';
+
+    const form = new FormData();
+    form.append('file', selectedFile);
+    form.append('job_description', document.getElementById('jd-input').value);
+
+    try {
+      progressText.textContent = 'Scoring with AI… this can take up to a minute';
+      const res = await fetch('/api/analyze', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+      toast('Analysis complete!', 'success');
+      window.location.href = '/analysis/' + data.analysis_id;
+    } catch (err) {
+      toast(err.message, 'error');
+      progress.style.display = 'none';
+      analyzeBtn.disabled = false;
+    }
+  });
+
+  // Load recent
+  async function loadRecent() {
+    const el = document.getElementById('recent-list');
+    try {
+      const res = await fetch('/api/analyses');
+      const data = await res.json();
+      const list = data.analyses || [];
+      if (!list.length) {
+        el.innerHTML = '<p class="muted">No analyses yet. Upload your first resume above.</p>';
+        return;
+      }
+      el.innerHTML = list.slice(0, 5).map(a => `
+        <a href="/analysis/${a.id}" class="analysis-row">
+          <div>
+            <strong>${escapeHtml(a.file_name)}</strong>
+            <span class="muted">${formatDate(a.created_at)}</span>
+          </div>
+          <div class="row-right">
+            ${a.status === 'completed' && a.ats_score != null
+              ? `<span class="score-pill ${scoreClass(a.ats_score)}">${a.ats_score}</span>`
+              : `<span class="status-pill">${a.status}</span>`}
+          </div>
+        </a>
+      `).join('');
+    } catch {
+      el.innerHTML = '<p class="muted">Could not load history.</p>';
+    }
+  }
+  loadRecent();
+</script>
+{% endblock %}

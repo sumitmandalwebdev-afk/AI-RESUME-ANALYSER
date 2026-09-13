@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Analysis — ResumeIQ{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <a href="/history" class="back-link">← History</a>
+    <div id="analysis-root">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading analysis…</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const analysisId = "{{ analysis_id }}";
+
+  async function loadAnalysis() {
+    const root = document.getElementById('analysis-root');
+    try {
+      const res = await fetch('/api/analyses/' + analysisId);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Not found');
+      const a = data.analysis;
+
+      if (a.status === 'processing' || a.status === 'pending') {
+        root.innerHTML = `
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <h2>Still working…</h2>
+            <p class="muted">This page refreshes automatically.</p>
+          </div>`;
+        setTimeout(loadAnalysis, 3000);
+        return;
+      }
+
+      if (a.status === 'failed') {
+        root.innerHTML = `
+          <div class="card error-card">
+            <h2>Analysis failed</h2>
+            <p>${escapeHtml(a.error_message || 'Unknown error')}</p>
+            <a href="/dashboard" class="btn btn-primary">Try again</a>
+          </div>`;
+        return;
+      }
+
+      const fb = a.feedback || {};
+      root.innerHTML = renderResult(a, fb);
+      animateGauges();
+    } catch (err) {
+      root.innerHTML = `<div class="card error-card"><h2>Error</h2><p>${escapeHtml(err.message)}</p></div>`;
+    }
+  }
+
+  function renderResult(a, fb) {
+    const sections = (fb.sections || []).map(s => `
+      <div class="section-row">
+        <div class="section-head">
+          <span>${escapeHtml(s.name)}</span>
+          <span class="score-pill ${scoreClass(s.score)}">${s.score}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill ${scoreClass(s.score)}" style="width:${s.score}%"></div></div>
+        <p class="section-fb">${escapeHtml(s.feedback)}</p>
+      </div>
+    `).join('');
+
+    const list = (items, cls) => (items || []).map(i => `<li class="${cls}">${escapeHtml(i)}</li>`).join('');
+
+    return `
+      <header class="analysis-header">
+        <h1>${escapeHtml(a.file_name)}</h1>
+        <p class="muted">
+          ${formatDate(a.created_at)}
+          ${a.job_description ? ' · with job description' : ' · no job description'}
+        </p>
+      </header>
+
+      <div class="score-panel card">
+        <div class="gauges">
+          <div class="gauge" data-score="${fb.ats_score || 0}">
+            <svg viewBox="0 0 120 120">
+              <circle class="gauge-bg" cx="60" cy="60" r="52"/>
+              <circle class="gauge-fg" cx="60" cy="60" r="52"
+                stroke-dasharray="0 327" transform="rotate(-90 60 60)"/>
+            </svg>
+            <div class="gauge-value">${fb.ats_score ?? '—'}</div>
+            <div class="gauge-label">ATS Score</div>
+          </div>
+          ${fb.job_match_score != null ? `
+          <div class="gauge" data-score="${fb.job_match_score}">
+            <svg viewBox="0 0 120 120">
+              <circle class="gauge-bg" cx="60" cy="60" r="52"/>
+              <circle class="gauge-fg" cx="60" cy="60" r="52"
+                stroke-dasharray="0 327" transform="rotate(-90 60 60)"/>
+            </svg>
+            <div class="gauge-value">${fb.job_match_score}</div>
+            <div class="gauge-label">JD Match</div>
+          </div>` : ''}
+        </div>
+        <p class="summary">${escapeHtml(fb.summary || '')}</p>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <h3>✅ Strengths</h3>
+          <ul class="bullet-list">${list(fb.strengths, 'good')}</ul>
+        </div>
+        <div class="card">
+          <h3>⚠️ Weaknesses</h3>
+          <ul class="bullet-list">${list(fb.weaknesses, 'bad')}</ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Section breakdown</h3>
+        <div class="sections">${sections}</div>
+      </div>
+
+      ${(fb.missing_keywords || []).length ? `
+      <div class="card">
+        <h3>🔑 Missing keywords</h3>
+        <div class="keyword-cloud">
+          ${(fb.missing_keywords || []).map(k => `<span class="keyword">${escapeHtml(k)}</span>`).join('')}
+        </div>
+      </div>` : ''}
+
+      ${(fb.suggestions || []).length ? `
+      <div class="card">
+        <h3>💡 Suggestions</h3>
+        <ol class="suggest-list">${list(fb.suggestions, '')}</ol>
+      </div>` : ''}
+    `;
+  }
+
+  function animateGauges() {
+    const circumference = 2 * Math.PI * 52; // ~327
+    document.querySelectorAll('.gauge').forEach(g => {
+      const score = parseInt(g.dataset.score, 10) || 0;
+      const fg = g.querySelector('.gauge-fg');
+      const offset = circumference * (1 - score / 100);
+      // color by score
+      let color = 'var(--danger)';
+      if (score >= 75) color = 'var(--success)';
+      else if (score >= 50) color = 'var(--warning)';
+      fg.style.stroke = color;
+      setTimeout(() => {
+        fg.style.strokeDasharray = `${circumference - offset} ${circumference}`;
+      }, 50);
+    });
+  }
+
+  loadAnalysis();
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login — ResumeIQ</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-page">
+
+  <div class="auth-wrapper">
+
+    <!-- ===== MASCOT ===== -->
+    <div class="mascot-box">
+      <svg id="mascotSvg" class="mascot idle" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+        <rect x="60" y="120" width="80" height="80" rx="30" fill="var(--accent)"/>
+        <circle cx="100" cy="80" r="55" fill="var(--accent-light)"/>
+        <g class="eyes-normal">
+          <circle cx="80" cy="75" r="6" fill="#1a1a1a"/>
+          <circle cx="120" cy="75" r="6" fill="#1a1a1a"/>
+        </g>
+        <g class="eyes-sad">
+          <path d="M72 70 L88 78" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
+          <path d="M128 70 L112 78" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
+        </g>
+        <path class="mouth-normal" d="M80 100 Q100 115 120 100" stroke="#1a1a1a" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path class="mouth-sad" d="M80 108 Q100 95 120 108" stroke="#1a1a1a" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <rect class="arm-point" x="130" y="130" width="55" height="16" rx="8" fill="var(--accent)"/>
+        <rect class="arm-facepalm" x="95" y="40" width="16" height="55" rx="8" fill="var(--accent)"/>
+      </svg>
+      <div id="mascotSpeech" class="speech-bubble">Hey! Login karo yahan 👉</div>
+    </div>
+    <!-- ===== MASCOT END ===== -->
+
+    <div class="auth-card">
+
+      <!-- LOGIN FORM -->
+      <div id="loginBox">
+        <h2>Welcome Back</h2>
+        <div id="loginError" class="flash-error" style="display:none;"></div>
+
+        <input type="email" id="loginEmail" placeholder="Email" required>
+        <input type="password" id="loginPassword" placeholder="Password" required>
+        <button id="loginBtn" type="button">Login</button>
+
+        <p>New here? <a href="#" id="showSignup">Sign up</a></p>
+      </div>
+
+      <!-- SIGNUP FORM (hidden by default) -->
+      <div id="signupBox" style="display:none;">
+        <h2>Create Account</h2>
+        <div id="signupError" class="flash-error" style="display:none;"></div>
+
+        <input type="text" id="signupName" placeholder="Full Name">
+        <input type="email" id="signupEmail" placeholder="Email" required>
+        <input type="password" id="signupPassword" placeholder="Password (min 6 chars)" required>
+        <button id="signupBtn" type="button">Sign Up</button>
+
+        <p>Already have account? <a href="#" id="showLogin">Login</a></p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/mascot.js') }}"></script>
+</body>
+</html>
